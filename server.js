@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 // ---- SETTINGS YOU CAN CHANGE ----
-const PASSCODE = "changeme123";      // <-- set your own secret passcode here
+const PASSCODE = "nikupatle24";      // <-- set your own secret passcode here
 const MAX_PEOPLE = 2;                // only 2 people allowed in the room
 // ----------------------------------
 
