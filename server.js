@@ -1,6 +1,4 @@
-cat > /home/claude/private-chat2/server.js << 'JSEOF'
 // server.js — the "brain" of the chat app.
-
 const express = require("express");
 const http = require("http");
 const path = require("path");
@@ -257,6 +255,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
-JSEOF
-echo "done"
+server.listen(PORT, () => console.log(`Chat server running on port ${PORT}JSEOF
