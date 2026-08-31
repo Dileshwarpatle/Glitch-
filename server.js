@@ -6,6 +6,7 @@ const express = require("express");
 const http = require("http");
 const path = require("path");
 const fs = require("fs");
+const crypto = require("crypto");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -17,21 +18,17 @@ const PASSCODE = "nikupatle24";      // your secret passcode
 const MAX_PEOPLE = 2;                // only 2 people allowed in the room
 // -------------------
 
-let connectedUsers = {}; // keeps track of who is currently in the chat
+let connectedUsers = {}; // socket.id -> name, for people currently connected
 
 // ---- MESSAGE STORAGE ----
-// Messages are saved to a file called messages.json so they survive
-// the server going to sleep and waking back up. (They will be lost
-// only if you redeploy the app or delete the service.)
 const MESSAGES_FILE = path.join(__dirname, "messages.json");
-const MAX_STORED_MESSAGES = 500; // keep the file from growing forever
+const MAX_STORED_MESSAGES = 500;
 
 function loadMessages() {
   try {
-    const data = fs.readFileSync(MESSAGES_FILE, "utf8");
-    return JSON.parse(data);
+    return JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf8"));
   } catch (e) {
-    return []; // no file yet, or unreadable — start fresh
+    return [];
   }
 }
 
@@ -45,16 +42,15 @@ function saveMessages(messages) {
 let chatHistory = loadMessages();
 // --------------------------
 
-// Serve the webpage (the HTML/CSS/JS in the "public" folder)
 app.use(express.static(path.join(__dirname, "public")));
 
-// Explicitly send index.html for the homepage (belt-and-suspenders fix)
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 io.on("connection", (socket) => {
   let joined = false;
+  let loggedOut = false;
 
   socket.on("join", ({ name, passcode }) => {
     if (passcode !== PASSCODE) {
@@ -68,26 +64,87 @@ io.on("connection", (socket) => {
 
     joined = true;
     connectedUsers[socket.id] = name || "Anonymous";
-    socket.emit("join-success");
-    socket.emit("chat-history", chatHistory); // send past messages to the person who just joined
+    socket.emit("join-success", { name: connectedUsers[socket.id] });
+    socket.emit("chat-history", chatHistory);
     io.emit("system-message", `${connectedUsers[socket.id]} joined the chat.`);
   });
 
+  // A new chat message
   socket.on("chat-message", (msg) => {
-    if (!joined) return;
+    if (!joined || !msg || !msg.trim()) return;
     const messageData = {
+      id: crypto.randomUUID(),
       name: connectedUsers[socket.id],
-      text: msg,
+      text: msg.trim(),
       time: new Date().toLocaleTimeString(),
+      seen: false,
+      edited: false,
+      deleted: false,
     };
     chatHistory.push(messageData);
     saveMessages(chatHistory);
     io.emit("chat-message", messageData);
   });
 
+  // The other person confirms they've seen a message
+  socket.on("message-seen", ({ id }) => {
+    const m = chatHistory.find((m) => m.id === id);
+    if (m && !m.seen) {
+      m.seen = true;
+      saveMessages(chatHistory);
+      io.emit("message-seen", { id });
+    }
+  });
+
+  // Editing your own message
+  socket.on("edit-message", ({ id, text }) => {
+    if (!joined || !text || !text.trim()) return;
+    const m = chatHistory.find((m) => m.id === id);
+    if (m && m.name === connectedUsers[socket.id] && !m.deleted) {
+      m.text = text.trim();
+      m.edited = true;
+      saveMessages(chatHistory);
+      io.emit("message-edited", { id, text: m.text });
+    }
+  });
+
+  // Deleting your own message
+  socket.on("delete-message", ({ id }) => {
+    if (!joined) return;
+    const m = chatHistory.find((m) => m.id === id);
+    if (m && m.name === connectedUsers[socket.id]) {
+      m.deleted = true;
+      m.text = "";
+      saveMessages(chatHistory);
+      io.emit("message-deleted", { id });
+    }
+  });
+
+  // Typing indicator
+  socket.on("typing", () => {
+    if (!joined) return;
+    socket.broadcast.emit("typing", { name: connectedUsers[socket.id] });
+  });
+
+  socket.on("stop-typing", () => {
+    if (!joined) return;
+    socket.broadcast.emit("stop-typing", { name: connectedUsers[socket.id] });
+  });
+
+  // Explicit logout (button press)
+  socket.on("logout", () => {
+    if (joined && !loggedOut) {
+      loggedOut = true;
+      io.emit("system-message", `${connectedUsers[socket.id]} logged out.`);
+      delete connectedUsers[socket.id];
+      joined = false;
+    }
+  });
+
+  // Tab/browser closed, or connection dropped, without pressing logout
   socket.on("disconnect", () => {
-    if (joined) {
-      io.emit("system-message", `${connectedUsers[socket.id]} left the chat.`);
+    if (joined && !loggedOut) {
+      io.emit("system-message", `${connectedUsers[socket.id]} left the browser without logging out.`);
       delete connectedUsers[socket.id];
     }
   });
