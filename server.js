@@ -1,6 +1,5 @@
+cat > /home/claude/private-chat2/server.js << 'JSEOF'
 // server.js — the "brain" of the chat app.
-// It runs the website, checks each person's name+password, and passes
-// messages (including images) between everyone in real time.
 
 const express = require("express");
 const http = require("http");
@@ -11,55 +10,73 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-
-// Allow slightly bigger messages so small images can be sent as base64 text
-const io = new Server(server, {
-  maxHttpBufferSize: 5 * 1024 * 1024, // 5 MB per message
-});
+const io = new Server(server, { maxHttpBufferSize: 5 * 1024 * 1024 });
 
 // ---- ACCOUNTS ----
-// Only these 2 exact name + password pairs can log in.
-// To change a password later, just edit the value here and redeploy.
 const USERS = {
   "Niku Patle": "niku24patle",
   "Kinjal": "Kittu22",
 };
-const MAX_PEOPLE = 2; // both accounts can be online together
+const MAX_PEOPLE = 2;
+
+// ---- SETTINGS ----
+// When this chat "expires" — just for the countdown banner, doesn't delete anything by itself.
+const EXPIRY_DATE = "2026-09-30"; // change this anytime
+// Messages older than this are auto-removed to keep it temporary
+const MAX_MESSAGE_AGE_DAYS = 30;
 // -------------------
 
-let connectedUsers = {}; // socket.id -> name, for people currently connected
+let connectedUsers = {}; // socket.id -> name
 
 // ---- MESSAGE STORAGE ----
 const MESSAGES_FILE = path.join(__dirname, "messages.json");
-const MAX_STORED_MESSAGES = 500;
+const STATE_FILE = path.join(__dirname, "state.json");
+const MAX_STORED_MESSAGES = 1000;
 
-function loadMessages() {
+function loadJSON(file, fallback) {
   try {
-    return JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf8"));
+    return JSON.parse(fs.readFileSync(file, "utf8"));
   } catch (e) {
-    return [];
+    return fallback;
   }
 }
-
-function saveMessages(messages) {
-  const trimmed = messages.slice(-MAX_STORED_MESSAGES);
-  fs.writeFile(MESSAGES_FILE, JSON.stringify(trimmed), (err) => {
-    if (err) console.log("Could not save messages:", err.message);
+function saveJSON(file, data) {
+  fs.writeFile(file, JSON.stringify(data), (err) => {
+    if (err) console.log(`Could not save ${file}:`, err.message);
   });
 }
 
-let chatHistory = loadMessages();
+let chatHistory = loadJSON(MESSAGES_FILE, []);
+let state = loadJSON(STATE_FILE, {
+  pinnedMessageId: null,
+  presence: Object.fromEntries(Object.keys(USERS).map((n) => [n, { online: false, lastSeen: null }])),
+});
+
+function saveMessages() { saveJSON(MESSAGES_FILE, chatHistory.slice(-MAX_STORED_MESSAGES)); }
+function saveState() { saveJSON(STATE_FILE, state); }
+
+function removeOldMessages() {
+  const cutoff = Date.now() - MAX_MESSAGE_AGE_DAYS * 24 * 60 * 60 * 1000;
+  const before = chatHistory.length;
+  chatHistory = chatHistory.filter((m) => m.createdAt >= cutoff);
+  if (chatHistory.length !== before) saveMessages();
+}
+removeOldMessages();
+setInterval(removeOldMessages, 60 * 60 * 1000); // check every hour
+
 // --------------------------
 
 app.use(express.static(path.join(__dirname, "public")));
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
 
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+function displayTime() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
 io.on("connection", (socket) => {
   let joined = false;
   let loggedOut = false;
+  let myName = null;
 
   socket.on("join", ({ name, password }) => {
     const correctPassword = USERS[name];
@@ -73,111 +90,173 @@ io.on("connection", (socket) => {
     }
 
     joined = true;
+    myName = name;
     connectedUsers[socket.id] = name;
-    socket.emit("join-success", { name });
+    state.presence[name] = { online: true, lastSeen: null };
+    saveState();
+
+    socket.emit("join-success", {
+      name,
+      expiryDate: EXPIRY_DATE,
+      pinnedMessageId: state.pinnedMessageId,
+      presence: state.presence,
+    });
     socket.emit("chat-history", chatHistory);
     io.emit("system-message", `${name} joined the chat.`);
+    io.emit("presence-update", { name, online: true, lastSeen: null });
   });
 
-  // A new text message
-  socket.on("chat-message", (msg) => {
-    if (!joined || !msg || !msg.trim()) return;
+  socket.on("chat-message", ({ text, replyTo }) => {
+    if (!joined || !text || !text.trim()) return;
     const messageData = {
       id: crypto.randomUUID(),
       type: "text",
-      name: connectedUsers[socket.id],
-      text: msg.trim(),
-      time: new Date().toLocaleTimeString(),
+      name: myName,
+      text: text.trim(),
+      time: displayTime(),
+      createdAt: Date.now(),
       seen: false,
       edited: false,
       deleted: false,
+      replyTo: replyTo || null,
+      reactions: {},
     };
     chatHistory.push(messageData);
-    saveMessages(chatHistory);
+    saveMessages();
     io.emit("chat-message", messageData);
   });
 
-  // A new image message (sent as a base64 data URL from the browser)
-  socket.on("chat-image", (imageData) => {
-    if (!joined || !imageData) return;
+  socket.on("chat-image", ({ image, replyTo }) => {
+    if (!joined || !image) return;
     const messageData = {
       id: crypto.randomUUID(),
       type: "image",
-      name: connectedUsers[socket.id],
-      text: imageData, // holds the image data URL
-      time: new Date().toLocaleTimeString(),
+      name: myName,
+      text: image,
+      time: displayTime(),
+      createdAt: Date.now(),
       seen: false,
       edited: false,
       deleted: false,
+      replyTo: replyTo || null,
+      reactions: {},
     };
     chatHistory.push(messageData);
-    saveMessages(chatHistory);
+    saveMessages();
     io.emit("chat-message", messageData);
   });
 
-  // Anyone else seeing a message marks it as seen (blue tick)
   socket.on("message-seen", ({ id }) => {
     const m = chatHistory.find((m) => m.id === id);
     if (m && !m.seen) {
       m.seen = true;
-      saveMessages(chatHistory);
+      saveMessages();
       io.emit("message-seen", { id });
     }
   });
 
-  // Editing your own text message
   socket.on("edit-message", ({ id, text }) => {
     if (!joined || !text || !text.trim()) return;
     const m = chatHistory.find((m) => m.id === id);
-    if (m && m.type === "text" && m.name === connectedUsers[socket.id] && !m.deleted) {
+    if (m && m.type === "text" && m.name === myName && !m.deleted) {
       m.text = text.trim();
       m.edited = true;
-      saveMessages(chatHistory);
+      saveMessages();
       io.emit("message-edited", { id, text: m.text });
     }
   });
 
-  // Deleting your own message (text or image)
   socket.on("delete-message", ({ id }) => {
     if (!joined) return;
     const m = chatHistory.find((m) => m.id === id);
-    if (m && m.name === connectedUsers[socket.id]) {
+    if (m && m.name === myName) {
       m.deleted = true;
       m.text = "";
-      saveMessages(chatHistory);
+      saveMessages();
       io.emit("message-deleted", { id });
+      if (state.pinnedMessageId === id) {
+        state.pinnedMessageId = null;
+        saveState();
+        io.emit("message-unpinned");
+      }
     }
   });
 
-  // Typing indicator
+  socket.on("react-message", ({ id, emoji }) => {
+    if (!joined) return;
+    const m = chatHistory.find((m) => m.id === id);
+    if (!m || m.deleted) return;
+    if (!m.reactions) m.reactions = {};
+    // remove this person's existing reaction on this message first
+    for (const key of Object.keys(m.reactions)) {
+      m.reactions[key] = m.reactions[key].filter((n) => n !== myName);
+      if (m.reactions[key].length === 0) delete m.reactions[key];
+    }
+    // toggle: if they clicked the same emoji they already had, leave it removed
+    const alreadyHadThis = m.reactions[emoji] && m.reactions[emoji].includes(myName);
+    if (!alreadyHadThis) {
+      if (!m.reactions[emoji]) m.reactions[emoji] = [];
+      m.reactions[emoji].push(myName);
+    }
+    saveMessages();
+    io.emit("message-reacted", { id, reactions: m.reactions });
+  });
+
+  socket.on("pin-message", ({ id }) => {
+    if (!joined) return;
+    const m = chatHistory.find((m) => m.id === id);
+    if (!m || m.deleted) return;
+    state.pinnedMessageId = id;
+    saveState();
+    io.emit("message-pinned", { id, message: m });
+  });
+
+  socket.on("unpin-message", () => {
+    if (!joined) return;
+    state.pinnedMessageId = null;
+    saveState();
+    io.emit("message-unpinned");
+  });
+
+  socket.on("clear-chat", () => {
+    if (!joined) return;
+    chatHistory = [];
+    state.pinnedMessageId = null;
+    saveMessages();
+    saveState();
+    io.emit("chat-cleared");
+  });
+
   socket.on("typing", () => {
     if (!joined) return;
-    socket.broadcast.emit("typing", { name: connectedUsers[socket.id] });
+    socket.broadcast.emit("typing", { name: myName });
   });
 
   socket.on("stop-typing", () => {
     if (!joined) return;
-    socket.broadcast.emit("stop-typing", { name: connectedUsers[socket.id] });
+    socket.broadcast.emit("stop-typing", { name: myName });
   });
 
-  // Explicit logout (button press)
-  socket.on("logout", () => {
-    if (joined && !loggedOut) {
-      loggedOut = true;
-      io.emit("system-message", `${connectedUsers[socket.id]} logged out.`);
-      delete connectedUsers[socket.id];
-      joined = false;
-    }
-  });
+  function handleLeave(explicitLogout) {
+    if (!joined || loggedOut) return;
+    loggedOut = true;
+    const lastSeen = Date.now();
+    state.presence[myName] = { online: false, lastSeen };
+    saveState();
+    io.emit(
+      "system-message",
+      explicitLogout ? `${myName} logged out.` : `${myName} left the browser without logging out.`
+    );
+    io.emit("presence-update", { name: myName, online: false, lastSeen });
+    delete connectedUsers[socket.id];
+    joined = false;
+  }
 
-  // Tab/browser closed, or connection dropped, without pressing logout
-  socket.on("disconnect", () => {
-    if (joined && !loggedOut) {
-      io.emit("system-message", `${connectedUsers[socket.id]} left the browser without logging out.`);
-      delete connectedUsers[socket.id];
-    }
-  });
+  socket.on("logout", () => handleLeave(true));
+  socket.on("disconnect", () => handleLeave(false));
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
+JSEOF
+echo "done"
