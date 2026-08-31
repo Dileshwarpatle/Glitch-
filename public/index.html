@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Just Us — Private Chat</title>
+<title>Niku & Kinjal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -20,16 +20,11 @@
     --text-muted: #8b93a7;
     --danger: #e07a6c;
   }
-
   * { box-sizing: border-box; }
-
   body {
     font-family: 'Inter', -apple-system, sans-serif;
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin: 0; min-height: 100vh;
+    display: flex; justify-content: center; align-items: center;
     padding: 20px;
     background:
       radial-gradient(ellipse at 30% 20%, var(--bg-glow) 0%, transparent 55%),
@@ -37,231 +32,222 @@
       var(--bg-deep);
     color: var(--text);
   }
-
   h1, h2 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
 
   /* ---- Login ---- */
   #login-box { width: 320px; text-align: center; }
   .glow-dot {
-    width: 8px; height: 8px;
-    border-radius: 50%;
-    background: var(--amber);
-    box-shadow: 0 0 12px 3px rgba(232,177,76,0.6);
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--amber); box-shadow: 0 0 12px 3px rgba(232,177,76,0.6);
     margin: 0 auto 18px;
   }
-  #login-box h1 { font-size: 28px; margin-bottom: 6px; }
+  .heart-line {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    color: var(--amber); font-size: 13px; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 10px; opacity: 0.85;
+  }
+  .heart-line::before, .heart-line::after {
+    content: ""; height: 1px; width: 30px; background: var(--panel-border);
+  }
+  #login-box h1 { font-size: 30px; margin-bottom: 6px; }
   .tagline { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
-
   input, select {
-    width: 100%;
-    padding: 13px 14px;
-    margin-top: 10px;
-    border-radius: 10px;
-    border: 1px solid var(--panel-border);
-    background: var(--panel);
-    color: var(--text);
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    outline: none;
+    width: 100%; padding: 13px 14px; margin-top: 10px;
+    border-radius: 10px; border: 1px solid var(--panel-border);
+    background: var(--panel); color: var(--text); font-size: 14px;
+    font-family: 'Inter', sans-serif; outline: none;
     transition: border-color 0.15s ease;
   }
   select { appearance: none; cursor: pointer; }
   input::placeholder { color: var(--text-muted); }
   input:focus, select:focus { border-color: var(--amber); }
-
   button {
-    width: 100%;
-    padding: 13px;
-    margin-top: 16px;
-    border-radius: 10px;
-    border: none;
-    background: var(--amber);
-    color: #1a1408;
-    font-weight: 600;
-    font-size: 14px;
-    font-family: 'Inter', sans-serif;
-    cursor: pointer;
-    transition: transform 0.1s ease, opacity 0.15s ease;
+    width: 100%; padding: 13px; margin-top: 16px; border-radius: 10px;
+    border: none; background: var(--amber); color: #1a1408;
+    font-weight: 600; font-size: 14px; font-family: 'Inter', sans-serif;
+    cursor: pointer; transition: transform 0.1s ease, opacity 0.15s ease;
   }
   button:hover { opacity: 0.92; }
   button:active { transform: scale(0.98); }
-
   #error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 16px; }
 
-  /* ---- Chat ---- */
+  /* ---- Chat shell ---- */
   #chat-box {
-    display: none;
-    width: 420px;
-    max-width: 100%;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 16px;
-    overflow: hidden;
+    display: none; width: 430px; max-width: 100%;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 16px; overflow: hidden;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
   }
-
   .chat-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 18px;
+    padding: 14px 16px; border-bottom: 1px solid var(--panel-border);
+  }
+  .chat-header-top { display: flex; justify-content: space-between; align-items: center; }
+  .chat-header-title { display: flex; align-items: center; gap: 9px; }
+  .chat-header h2 { font-size: 16px; }
+  .status-line { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; padding-left: 17px; }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; background: var(--text-muted); }
+  .status-dot.online { background: var(--teal); box-shadow: 0 0 6px 1px rgba(79,209,197,0.6); }
+
+  .header-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px;
+    border: 1px solid var(--panel-border); background: transparent;
+    color: var(--text-muted); font-size: 14px; margin-top: 0; padding: 0;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+  #expiry-banner {
+    font-size: 11px; color: var(--amber); text-align: center;
+    padding: 5px; background: rgba(232,177,76,0.08);
     border-bottom: 1px solid var(--panel-border);
   }
-  .chat-header-title { display: flex; align-items: center; gap: 9px; }
-  .chat-header h2 { font-size: 17px; }
 
-  #logout-btn {
-    width: auto;
-    margin-top: 0;
-    background: transparent;
-    color: var(--text-muted);
-    border: 1px solid var(--panel-border);
-    padding: 7px 13px;
-    font-size: 12px;
-    font-weight: 500;
+  #search-bar { display: none; padding: 10px 16px; border-bottom: 1px solid var(--panel-border); }
+  #search-bar input { margin-top: 0; }
+
+  #pinned-banner {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 16px; background: rgba(232,177,76,0.06);
+    border-bottom: 1px solid var(--panel-border);
+    font-size: 12px; cursor: pointer;
   }
-  #logout-btn:hover { color: var(--text); border-color: var(--text-muted); }
+  #pinned-banner .pin-icon { color: var(--amber); }
+  #pinned-banner .pin-text { flex: 1; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #pinned-banner .unpin-x { color: var(--text-muted); cursor: pointer; }
+  #pinned-banner .unpin-x:hover { color: var(--danger); }
 
   #messages {
-    height: 380px;
-    overflow-y: auto;
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    height: 380px; overflow-y: auto; padding: 18px;
+    display: flex; flex-direction: column; gap: 3px;
   }
   #messages::-webkit-scrollbar { width: 6px; }
   #messages::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
 
-  .msg-row { display: flex; margin-bottom: 9px; max-width: 100%; flex-direction: column; }
+  .msg-row { display: flex; margin-bottom: 12px; max-width: 100%; flex-direction: column; }
   .msg-row.mine { align-items: flex-end; }
   .msg-row.theirs { align-items: flex-start; }
+  .msg-row.highlight .bubble { outline: 2px solid var(--amber); }
 
-  .sender-label {
-    font-size: 10.5px;
-    color: var(--text-muted);
-    margin-bottom: 2px;
-    padding: 0 3px;
-  }
+  .sender-label { font-size: 10.5px; color: var(--text-muted); margin-bottom: 2px; padding: 0 3px; }
 
   .bubble {
-    position: relative;
-    max-width: 78%;
-    padding: 10px 14px;
-    border-radius: 16px;
-    font-size: 14.5px;
-    line-height: 1.4;
-    word-wrap: break-word;
+    position: relative; max-width: 78%; padding: 10px 14px;
+    border-radius: 16px; font-size: 14.5px; line-height: 1.4; word-wrap: break-word;
   }
-  .msg-row.mine .bubble {
-    background: var(--amber);
-    color: #1a1408;
-    border-bottom-right-radius: 4px;
-  }
-  .msg-row.theirs .bubble {
-    background: rgba(79,209,197,0.08);
-    border: 1px solid var(--teal-dim);
-    color: var(--text);
-    border-bottom-left-radius: 4px;
-  }
+  .msg-row.mine .bubble { background: var(--amber); color: #1a1408; border-bottom-right-radius: 4px; }
+  .msg-row.theirs .bubble { background: rgba(79,209,197,0.08); border: 1px solid var(--teal-dim); color: var(--text); border-bottom-left-radius: 4px; }
   .bubble .deleted-text { font-style: italic; opacity: 0.6; }
   .bubble img { max-width: 100%; border-radius: 10px; display: block; margin-top: 2px; cursor: pointer; }
+  .bubble a { color: inherit; text-decoration: underline; }
 
-  .meta-row {
-    display: flex; align-items: center; gap: 5px;
-    font-size: 10.5px; margin-top: 3px; opacity: 0.7;
+  .reply-preview-in-bubble {
+    border-left: 2px solid rgba(0,0,0,0.25);
+    padding: 3px 8px; margin-bottom: 6px; font-size: 12px;
+    opacity: 0.75; border-radius: 4px; background: rgba(0,0,0,0.06);
   }
+  .msg-row.theirs .reply-preview-in-bubble { border-left-color: var(--teal); background: rgba(255,255,255,0.04); }
+
+  .meta-row { display: flex; align-items: center; gap: 5px; font-size: 10.5px; margin-top: 3px; opacity: 0.7; }
   .msg-row.mine .meta-row { color: #7a5f2c; }
   .msg-row.theirs .meta-row { color: var(--text-muted); }
-
   .tick { font-size: 12px; }
   .tick.seen { color: var(--teal); }
 
-  .msg-actions {
-    display: none; gap: 10px; font-size: 11px; margin-top: 2px; cursor: pointer;
+  .reactions-row { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+  .reaction-pill {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 1px 6px; font-size: 12px; cursor: pointer;
   }
-  .msg-row.mine:hover .msg-actions { display: flex; }
+
+  .msg-actions {
+    display: none; gap: 10px; font-size: 11px; margin-top: 3px; cursor: pointer;
+  }
+  .msg-row:hover .msg-actions { display: flex; }
   .msg-actions span { color: var(--text-muted); }
   .msg-actions span:hover { color: var(--text); }
 
-  .system {
-    text-align: center; color: var(--text-muted);
-    font-size: 12px; font-style: italic; margin: 8px 0;
-  }
+  .system { text-align: center; color: var(--text-muted); font-size: 12px; font-style: italic; margin: 8px 0; }
 
-  #typing-indicator {
-    font-size: 12px; color: var(--teal); font-style: italic;
-    min-height: 18px; padding: 0 18px;
-  }
+  #typing-indicator { font-size: 12px; color: var(--teal); font-style: italic; min-height: 18px; padding: 0 18px; }
 
-  .input-row {
-    display: flex; align-items: center; gap: 6px;
-    padding: 14px 16px 16px; border-top: 1px solid var(--panel-border);
-    position: relative;
+  #reply-preview-bar {
+    display: none; align-items: center; gap: 8px;
+    padding: 8px 16px; background: rgba(255,255,255,0.03);
+    border-top: 1px solid var(--panel-border); font-size: 12px;
   }
+  #reply-preview-bar .txt { flex: 1; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #reply-preview-bar .cancel { cursor: pointer; color: var(--text-muted); }
+  #reply-preview-bar .cancel:hover { color: var(--danger); }
+
+  .input-row { display: flex; align-items: center; gap: 6px; padding: 14px 16px 16px; border-top: 1px solid var(--panel-border); position: relative; }
   .input-row input { margin-top: 0; flex: 1; }
   .input-row button.send-btn { width: auto; margin-top: 0; padding: 0 18px; }
 
-  .icon-btn {
-    width: 38px; height: 38px; flex-shrink: 0;
-    border-radius: 10px; border: 1px solid var(--panel-border);
-    background: transparent; color: var(--text-muted);
-    font-size: 17px; margin-top: 0; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
+  #emoji-panel, #react-panel {
+    display: none; position: absolute; bottom: 60px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 12px; padding: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4); z-index: 5;
   }
-  .icon-btn:hover { color: var(--text); border-color: var(--text-muted); }
-
-  #emoji-panel {
-    display: none;
-    position: absolute;
-    bottom: 60px;
-    left: 16px;
-    right: 16px;
-    background: var(--panel);
-    border: 1px solid var(--panel-border);
-    border-radius: 12px;
-    padding: 10px;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 4px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-  }
-  #emoji-panel span {
-    cursor: pointer;
-    text-align: center;
-    font-size: 20px;
-    padding: 4px;
-    border-radius: 6px;
-  }
-  #emoji-panel span:hover { background: rgba(255,255,255,0.08); }
+  #emoji-panel { left: 16px; right: 16px; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  #emoji-panel span, #react-panel span { cursor: pointer; text-align: center; font-size: 20px; padding: 4px; border-radius: 6px; }
+  #emoji-panel span:hover, #react-panel span:hover { background: rgba(255,255,255,0.08); }
+  #react-panel { display: none; gap: 4px; }
+  #react-panel.show { display: flex; }
 </style>
 </head>
 <body>
 
 <div id="login-box">
   <div class="glow-dot"></div>
-  <h1>Just Us</h1>
-  <div class="tagline">A private space, someone made just for you.</div>
+  <div class="heart-line">Only for us</div>
+  <h1>Niku &amp; Kinjal</h1>
+  <div class="tagline">A private space made just for the two of you.</div>
   <select id="name">
     <option value="" disabled selected>Choose your name</option>
     <option>Niku Patle</option>
     <option>Kinjal</option>
   </select>
-  <input id="password" placeholder="Password" type="password" />
+  <input id="password" placeholder="Password" type="password" onkeypress="if(event.key==='Enter') join()" />
   <button onclick="join()">Enter</button>
   <div id="error"></div>
 </div>
 
 <div id="chat-box">
   <div class="chat-header">
-    <div class="chat-header-title">
-      <div class="glow-dot" style="margin:0;"></div>
-      <h2>Just Us</h2>
+    <div class="chat-header-top">
+      <div class="chat-header-title">
+        <div class="glow-dot" style="margin:0;"></div>
+        <h2>Niku &amp; Kinjal</h2>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" onclick="toggleSearch()" title="Search">🔎</button>
+        <button class="icon-btn" onclick="downloadChat()" title="Download chat">⬇</button>
+        <button class="icon-btn" onclick="clearChat()" title="Clear chat">🗑</button>
+        <button class="icon-btn" onclick="logout()" title="Logout">⎋</button>
+      </div>
     </div>
-    <button id="logout-btn" onclick="logout()">Logout</button>
+    <div class="status-line" id="status-line"></div>
   </div>
+
+  <div id="expiry-banner"></div>
+  <div id="pinned-banner" onclick="scrollToPinned()">
+    <span class="pin-icon">📌</span>
+    <span class="pin-text" id="pinned-text"></span>
+    <span class="unpin-x" onclick="event.stopPropagation(); unpinMessage()">✕</span>
+  </div>
+  <div id="search-bar">
+    <input id="search-input" placeholder="Search messages..." oninput="doSearch()" />
+  </div>
+
   <div id="messages"></div>
   <div id="typing-indicator"></div>
+
+  <div id="reply-preview-bar">
+    <span class="txt" id="reply-preview-text"></span>
+    <span class="cancel" onclick="cancelReply()">✕</span>
+  </div>
+
   <div class="input-row">
     <button class="icon-btn" onclick="toggleEmoji()" title="Emoji">😊</button>
     <button class="icon-btn" onclick="document.getElementById('image-input').click()" title="Send a photo">📷</button>
@@ -276,26 +262,52 @@
 <script>
   const socket = io();
   let myName = "";
+  let otherName = "";
   let typingTimeout = null;
+  let replyingTo = null;
+  let pinnedMessageId = null;
+  let unreadCount = 0;
+  let windowFocused = true;
+  let clientMessages = []; // local copy for search + download
 
   const EMOJIS = ["😀","😂","😍","😊","😉","😘","😢","😭","😡","👍","👎","🙏","🎉","❤","🔥","💯","😴","🤔","😎","🥳","👋","🙌","😅","🤗"];
+  const REACTIONS = ["❤","👍","😂","😮","😢","🙏"];
 
-  function toggleEmoji() {
-    const panel = document.getElementById("emoji-panel");
-    if (panel.style.display === "grid") {
-      panel.style.display = "none";
-      return;
+  window.addEventListener("focus", () => { windowFocused = true; clearUnread(); });
+  window.addEventListener("blur", () => { windowFocused = false; });
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) { windowFocused = true; clearUnread(); }
+  });
+
+  function clearUnread() {
+    unreadCount = 0;
+    document.title = "Niku & Kinjal";
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = 720;
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+      osc.start(); osc.stop(ctx.currentTime + 0.25);
+    } catch (e) {}
+  }
+
+  function notifyNewMessage(data) {
+    if (windowFocused && !document.hidden) return;
+    unreadCount++;
+    document.title = `(${unreadCount}) Niku & Kinjal`;
+    playBeep();
+    if (window.Notification && Notification.permission === "granted") {
+      new Notification(data.name, { body: data.type === "image" ? "Sent a photo" : data.text });
     }
-    panel.innerHTML = EMOJIS.map(e => `<span onclick="insertEmoji('${e}')">${e}</span>`).join("");
-    panel.style.display = "grid";
   }
 
-  function insertEmoji(e) {
-    const input = document.getElementById("msg-input");
-    input.value += e;
-    input.focus();
-  }
-
+  // ---- Login ----
   function join() {
     const name = document.getElementById("name").value;
     const password = document.getElementById("password").value;
@@ -306,15 +318,48 @@
     socket.emit("join", { name, password });
   }
 
-  socket.on("join-error", (msg) => {
-    document.getElementById("error").textContent = msg;
-  });
+  socket.on("join-error", (msg) => { document.getElementById("error").textContent = msg; });
 
   socket.on("join-success", (data) => {
     myName = data.name;
+    otherName = Object.keys(data.presence).find((n) => n !== myName) || "";
     document.getElementById("login-box").style.display = "none";
     document.getElementById("chat-box").style.display = "block";
+
+    if (window.Notification && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+
+    updateExpiryBanner(data.expiryDate);
+    updatePresence(otherName, data.presence[otherName]);
+    if (data.pinnedMessageId) pinnedMessageId = data.pinnedMessageId;
   });
+
+  function updateExpiryBanner(expiryDateStr) {
+    const expiry = new Date(expiryDateStr + "T23:59:59");
+    const now = new Date();
+    const daysLeft = Math.ceil((expiry - now) / (1000 * 60 * 60 * 24));
+    const banner = document.getElementById("expiry-banner");
+    if (daysLeft > 1) banner.textContent = `This private chat is set to end in ${daysLeft} days.`;
+    else if (daysLeft === 1) banner.textContent = `This private chat ends tomorrow.`;
+    else if (daysLeft === 0) banner.textContent = `This private chat ends today.`;
+    else banner.textContent = `This private chat's time is up.`;
+  }
+
+  function updatePresence(name, info) {
+    if (name !== otherName || !info) return;
+    const line = document.getElementById("status-line");
+    if (info.online) {
+      line.innerHTML = `<span class="status-dot online"></span>${otherName} is online`;
+    } else if (info.lastSeen) {
+      const t = new Date(info.lastSeen).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      line.innerHTML = `<span class="status-dot"></span>${otherName} last seen ${t}`;
+    } else {
+      line.innerHTML = `<span class="status-dot"></span>${otherName} is offline`;
+    }
+  }
+
+  socket.on("presence-update", (data) => updatePresence(data.name, data));
 
   function logout() {
     socket.emit("logout");
@@ -323,13 +368,15 @@
       '<p style="text-align:center;color:var(--text-muted);padding:40px 20px;">You have logged out.<br>Refresh the page to join again.</p>';
   }
 
+  // ---- Sending ----
   function sendMsg() {
     const input = document.getElementById("msg-input");
     const text = input.value.trim();
     if (!text) return;
-    socket.emit("chat-message", text);
+    socket.emit("chat-message", { text, replyTo: replyingTo });
     socket.emit("stop-typing");
     input.value = "";
+    cancelReply();
     document.getElementById("emoji-panel").style.display = "none";
   }
 
@@ -343,7 +390,8 @@
     }
     const reader = new FileReader();
     reader.onload = () => {
-      socket.emit("chat-image", reader.result);
+      socket.emit("chat-image", { image: reader.result, replyTo: replyingTo });
+      cancelReply();
     };
     reader.readAsDataURL(file);
     event.target.value = "";
@@ -354,16 +402,135 @@
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => socket.emit("stop-typing"), 1200);
   }
+  socket.on("typing", (data) => { document.getElementById("typing-indicator").textContent = `${data.name} is typing...`; });
+  socket.on("stop-typing", () => { document.getElementById("typing-indicator").textContent = ""; });
 
-  socket.on("typing", (data) => {
-    document.getElementById("typing-indicator").textContent = `${data.name} is typing...`;
+  // ---- Emoji picker ----
+  function toggleEmoji() {
+    const panel = document.getElementById("emoji-panel");
+    if (panel.style.display === "grid") { panel.style.display = "none"; return; }
+    panel.innerHTML = EMOJIS.map(e => `<span onclick="insertEmoji('${e}')">${e}</span>`).join("");
+    panel.style.display = "grid";
+  }
+  function insertEmoji(e) {
+    const input = document.getElementById("msg-input");
+    input.value += e;
+    input.focus();
+  }
+
+  // ---- Reply ----
+  function startReply(id) {
+    const m = clientMessages.find(m => m.id === id);
+    if (!m) return;
+    replyingTo = { id: m.id, name: m.name, text: m.type === "image" ? "Photo" : m.text };
+    document.getElementById("reply-preview-text").textContent = `Replying to ${m.name}: ${replyingTo.text}`;
+    document.getElementById("reply-preview-bar").style.display = "flex";
+    document.getElementById("msg-input").focus();
+  }
+  function cancelReply() {
+    replyingTo = null;
+    document.getElementById("reply-preview-bar").style.display = "none";
+  }
+
+  // ---- Reactions ----
+  function toggleReactPanel(id, btn) {
+    let panel = document.getElementById("react-panel");
+    if (panel.classList.contains("show") && panel.dataset.forId === id) {
+      panel.classList.remove("show");
+      return;
+    }
+    panel.innerHTML = REACTIONS.map(e => `<span onclick="sendReaction('${id}','${e}')">${e}</span>`).join("");
+    panel.dataset.forId = id;
+    const rect = btn.getBoundingClientRect();
+    const boxRect = document.getElementById("chat-box").getBoundingClientRect();
+    panel.style.left = (rect.left - boxRect.left - 60) + "px";
+    panel.style.top = (rect.top - boxRect.top - 46) + "px";
+    panel.classList.add("show");
+  }
+  function sendReaction(id, emoji) {
+    socket.emit("react-message", { id, emoji });
+    document.getElementById("react-panel").classList.remove("show");
+  }
+  document.addEventListener("click", (e) => {
+    const panel = document.getElementById("react-panel");
+    if (!panel.contains(e.target) && !e.target.closest(".react-trigger")) panel.classList.remove("show");
   });
 
-  socket.on("stop-typing", () => {
-    document.getElementById("typing-indicator").textContent = "";
+  // ---- Pin ----
+  function pinMsg(id) { socket.emit("pin-message", { id }); }
+  function unpinMessage() { socket.emit("unpin-message"); }
+  function scrollToPinned() {
+    if (!pinnedMessageId) return;
+    const row = document.querySelector(`.msg-row[data-id="${pinnedMessageId}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.add("highlight");
+      setTimeout(() => row.classList.remove("highlight"), 1500);
+    }
+  }
+  function updatePinnedBanner() {
+    const banner = document.getElementById("pinned-banner");
+    if (!pinnedMessageId) { banner.style.display = "none"; return; }
+    const m = clientMessages.find(m => m.id === pinnedMessageId);
+    if (!m) { banner.style.display = "none"; return; }
+    document.getElementById("pinned-text").textContent = `${m.name}: ${m.type === "image" ? "Photo" : m.text}`;
+    banner.style.display = "flex";
+  }
+  socket.on("message-pinned", (data) => { pinnedMessageId = data.id; updatePinnedBanner(); });
+  socket.on("message-unpinned", () => { pinnedMessageId = null; updatePinnedBanner(); });
+
+  // ---- Search ----
+  function toggleSearch() {
+    const bar = document.getElementById("search-bar");
+    bar.style.display = bar.style.display === "block" ? "none" : "block";
+    if (bar.style.display === "block") document.getElementById("search-input").focus();
+    else { document.getElementById("search-input").value = ""; doSearch(); }
+  }
+  function doSearch() {
+    const q = document.getElementById("search-input").value.trim().toLowerCase();
+    document.querySelectorAll(".msg-row").forEach((row) => {
+      const txt = (row.querySelector(".msg-text")?.textContent || "").toLowerCase();
+      row.style.display = (!q || txt.includes(q)) ? "flex" : "none";
+    });
+  }
+
+  // ---- Download / Clear ----
+  function downloadChat() {
+    let lines = clientMessages.map(m => {
+      if (m.deleted) return `[${m.time}] ${m.name}: (deleted message)`;
+      if (m.type === "image") return `[${m.time}] ${m.name}: (photo)`;
+      return `[${m.time}] ${m.name}: ${m.text}`;
+    });
+    const blob = new Blob([lines.join("\\n")], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "niku-kinjal-chat.txt";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function clearChat() {
+    if (confirm("Clear the entire chat history for both of you? This can't be undone.")) {
+      socket.emit("clear-chat");
+    }
+  }
+  socket.on("chat-cleared", () => {
+    document.getElementById("messages").innerHTML = "";
+    clientMessages = [];
+    pinnedMessageId = null;
+    updatePinnedBanner();
   });
+
+  // ---- Rendering ----
+  function linkify(escapedText) {
+    return escapedText.replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/g, (match) => {
+      const href = match.startsWith("http") ? match : "https://" + match;
+      return `<a href="${href}" target="_blank" rel="noopener">${match}</a>`;
+    });
+  }
 
   function addMessageToScreen(data) {
+    clientMessages.push(data);
     const isOwn = data.name === myName;
 
     const row = document.createElement("div");
@@ -376,9 +543,8 @@
     document.getElementById("messages").appendChild(row);
     document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
 
-    if (!isOwn && !data.deleted) {
-      socket.emit("message-seen", { id: data.id });
-    }
+    if (!isOwn && !data.deleted) socket.emit("message-seen", { id: data.id });
+    if (!isOwn) notifyNewMessage(data);
   }
 
   function renderMessageContent(row, data, isOwn) {
@@ -400,31 +566,57 @@
       return;
     }
 
+    let replyHtml = "";
+    if (data.replyTo) {
+      replyHtml = `<div class="reply-preview-in-bubble">${escapeHtml(data.replyTo.name)}: ${escapeHtml(data.replyTo.text)}</div>`;
+    }
+
     if (data.type === "image") {
-      bubble.innerHTML = `<img src="${data.text}" alt="shared photo" onclick="window.open('${data.text}','_blank')" />`;
+      bubble.innerHTML = `${replyHtml}<img src="${data.text}" alt="shared photo" onclick="window.open('${data.text}','_blank')" />`;
     } else {
-      bubble.innerHTML = `<span class="msg-text">${escapeHtml(data.text)}</span>`;
+      bubble.innerHTML = `${replyHtml}<span class="msg-text">${linkify(escapeHtml(data.text))}</span>`;
     }
 
     const meta = document.createElement("div");
     meta.className = "meta-row";
     const editedTag = data.edited ? `<span class="edited-tag">edited</span> · ` : "";
     let tickHtml = "";
-    if (isOwn) {
-      tickHtml = ` <span class="tick${data.seen ? " seen" : ""}">${data.seen ? "&#10003;&#10003;" : "&#10003;"}</span>`;
-    }
+    if (isOwn) tickHtml = ` <span class="tick${data.seen ? " seen" : ""}">${data.seen ? "&#10003;&#10003;" : "&#10003;"}</span>`;
     meta.innerHTML = `${editedTag}<span class="time">${data.time}</span>${tickHtml}`;
 
     row.appendChild(bubble);
     row.appendChild(meta);
 
-    if (isOwn) {
-      const actions = document.createElement("div");
-      actions.className = "msg-actions";
-      const editBtn = data.type === "text" ? `<span onclick="editMsg('${data.id}')">Edit</span>` : "";
-      actions.innerHTML = `${editBtn}<span onclick="deleteMsg('${data.id}')">Delete</span>`;
-      row.appendChild(actions);
-    }
+    // reactions
+    const reactionsRow = document.createElement("div");
+    reactionsRow.className = "reactions-row";
+    renderReactions(reactionsRow, data.reactions || {});
+    row.appendChild(reactionsRow);
+
+    // actions
+    const actions = document.createElement("div");
+    actions.className = "msg-actions";
+    const editBtn = isOwn && data.type === "text" ? `<span onclick="editMsg('${data.id}')">Edit</span>` : "";
+    const deleteBtn = isOwn ? `<span onclick="deleteMsg('${data.id}')">Delete</span>` : "";
+    actions.innerHTML = `
+      <span onclick="startReply('${data.id}')">Reply</span>
+      <span class="react-trigger" onclick="toggleReactPanel('${data.id}', this)">React</span>
+      <span onclick="pinMsg('${data.id}')">Pin</span>
+      ${editBtn}${deleteBtn}
+    `;
+    row.appendChild(actions);
+  }
+
+  function renderReactions(container, reactions) {
+    container.innerHTML = "";
+    Object.entries(reactions).forEach(([emoji, names]) => {
+      if (!names.length) return;
+      const pill = document.createElement("span");
+      pill.className = "reaction-pill";
+      pill.textContent = `${emoji} ${names.length}`;
+      pill.title = names.join(", ");
+      container.appendChild(pill);
+    });
   }
 
   function editMsg(id) {
@@ -435,40 +627,35 @@
       socket.emit("edit-message", { id, text: newText.trim() });
     }
   }
-
   function deleteMsg(id) {
-    if (confirm("Delete this message?")) {
-      socket.emit("delete-message", { id });
-    }
+    if (confirm("Delete this message?")) socket.emit("delete-message", { id });
   }
 
   socket.on("chat-message", addMessageToScreen);
-
-  socket.on("chat-history", (history) => {
-    history.forEach(addMessageToScreen);
-  });
+  socket.on("chat-history", (history) => { history.forEach(addMessageToScreen); updatePinnedBanner(); });
 
   socket.on("message-seen", ({ id }) => {
     const row = document.querySelector(`.msg-row[data-id="${id}"]`);
     if (row) {
       const tick = row.querySelector(".tick");
-      if (tick) {
-        tick.classList.add("seen");
-        tick.innerHTML = "&#10003;&#10003;";
-      }
+      if (tick) { tick.classList.add("seen"); tick.innerHTML = "&#10003;&#10003;"; }
     }
+    const m = clientMessages.find(m => m.id === id);
+    if (m) m.seen = true;
   });
 
   socket.on("message-edited", ({ id, text }) => {
     const row = document.querySelector(`.msg-row[data-id="${id}"]`);
     if (row) {
       const span = row.querySelector(".msg-text");
-      if (span) span.textContent = text;
+      if (span) span.innerHTML = linkify(escapeHtml(text));
       const meta = row.querySelector(".meta-row");
       if (meta && !meta.querySelector(".edited-tag")) {
         meta.insertAdjacentHTML("afterbegin", `<span class="edited-tag">edited</span> · `);
       }
     }
+    const m = clientMessages.find(m => m.id === id);
+    if (m) { m.text = text; m.edited = true; }
   });
 
   socket.on("message-deleted", ({ id }) => {
@@ -477,6 +664,19 @@
       const isOwn = row.classList.contains("mine");
       renderMessageContent(row, { name: row.dataset.name || "", deleted: true }, isOwn);
     }
+    const m = clientMessages.find(m => m.id === id);
+    if (m) m.deleted = true;
+    if (pinnedMessageId === id) { pinnedMessageId = null; updatePinnedBanner(); }
+  });
+
+  socket.on("message-reacted", ({ id, reactions }) => {
+    const row = document.querySelector(`.msg-row[data-id="${id}"]`);
+    if (row) {
+      const reactionsRow = row.querySelector(".reactions-row");
+      if (reactionsRow) renderReactions(reactionsRow, reactions);
+    }
+    const m = clientMessages.find(m => m.id === id);
+    if (m) m.reactions = reactions;
   });
 
   socket.on("system-message", (text) => {
