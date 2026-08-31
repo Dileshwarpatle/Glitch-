@@ -8,16 +8,6 @@ const path = require("path");
 const fs = require("fs");
 const { Server } = require("socket.io");
 
-// ---- DEBUG: show exactly what files exist where Render runs the app ----
-console.log("Current folder (__dirname):", __dirname);
-console.log("Files in root:", fs.readdirSync(__dirname));
-try {
-  console.log("Files in public folder:", fs.readdirSync(path.join(__dirname, "public")));
-} catch (e) {
-  console.log("PROBLEM: no 'public' folder found here:", e.message);
-}
-// --------------------------------------------------------------------
-
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
@@ -27,10 +17,38 @@ const PASSCODE = "nikupatle24";      // your secret passcode
 const MAX_PEOPLE = 2;                // only 2 people allowed in the room
 // -------------------
 
-let connectedUsers = {};
+let connectedUsers = {}; // keeps track of who is currently in the chat
 
+// ---- MESSAGE STORAGE ----
+// Messages are saved to a file called messages.json so they survive
+// the server going to sleep and waking back up. (They will be lost
+// only if you redeploy the app or delete the service.)
+const MESSAGES_FILE = path.join(__dirname, "messages.json");
+const MAX_STORED_MESSAGES = 500; // keep the file from growing forever
+
+function loadMessages() {
+  try {
+    const data = fs.readFileSync(MESSAGES_FILE, "utf8");
+    return JSON.parse(data);
+  } catch (e) {
+    return []; // no file yet, or unreadable — start fresh
+  }
+}
+
+function saveMessages(messages) {
+  const trimmed = messages.slice(-MAX_STORED_MESSAGES);
+  fs.writeFile(MESSAGES_FILE, JSON.stringify(trimmed), (err) => {
+    if (err) console.log("Could not save messages:", err.message);
+  });
+}
+
+let chatHistory = loadMessages();
+// --------------------------
+
+// Serve the webpage (the HTML/CSS/JS in the "public" folder)
 app.use(express.static(path.join(__dirname, "public")));
 
+// Explicitly send index.html for the homepage (belt-and-suspenders fix)
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
@@ -51,16 +69,20 @@ io.on("connection", (socket) => {
     joined = true;
     connectedUsers[socket.id] = name || "Anonymous";
     socket.emit("join-success");
+    socket.emit("chat-history", chatHistory); // send past messages to the person who just joined
     io.emit("system-message", `${connectedUsers[socket.id]} joined the chat.`);
   });
 
   socket.on("chat-message", (msg) => {
     if (!joined) return;
-    io.emit("chat-message", {
+    const messageData = {
       name: connectedUsers[socket.id],
       text: msg,
       time: new Date().toLocaleTimeString(),
-    });
+    };
+    chatHistory.push(messageData);
+    saveMessages(chatHistory);
+    io.emit("chat-message", messageData);
   });
 
   socket.on("disconnect", () => {
