@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Private Chat</title>
+<style>
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #f4f4f7;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+  }
+  #login-box, #chat-box {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 340px;
+  }
+  #chat-box { display: none; width: 380px; }
+  input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+    font-size: 14px;
+  }
+  button {
+    background: #4f46e5;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 12px;
+  }
+  #messages {
+    height: 320px;
+    overflow-y: auto;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #fafafa;
+  }
+  .msg { margin-bottom: 8px; }
+  .msg .name { font-weight: 600; color: #4f46e5; }
+  .msg .time { font-size: 11px; color: #999; margin-left: 6px; }
+  .system { color: #888; font-style: italic; font-size: 13px; text-align: center; margin: 6px 0; }
+  #error { color: #d33; font-size: 13px; margin-top: 8px; min-height: 16px; }
+</style>
+</head>
+<body>
+
+<div id="login-box">
+  <h2>Join Private Chat</h2>
+  <input id="name" placeholder="Your name" />
+  <input id="passcode" placeholder="Passcode" type="password" />
+  <button onclick="join()">Join</button>
+  <div id="error"></div>
+</div>
+
+<div id="chat-box">
+  <div id="messages"></div>
+  <input id="msg-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" />
+  <button onclick="sendMsg()">Send</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+
+  function join() {
+    const name = document.getElementById("name").value.trim();
+    const passcode = document.getElementById("passcode").value;
+    if (!name || !passcode) {
+      document.getElementById("error").textContent = "Please enter both fields.";
+      return;
+    }
+    socket.emit("join", { name, passcode });
+  }
+
+  socket.on("join-error", (msg) => {
+    document.getElementById("error").textContent = msg;
+  });
+
+  socket.on("join-success", () => {
+    document.getElementById("login-box").style.display = "none";
+    document.getElementById("chat-box").style.display = "block";
+  });
+
+  function sendMsg() {
+    const input = document.getElementById("msg-input");
+    const text = input.value.trim();
+    if (!text) return;
+    socket.emit("chat-message", text);
+    input.value = "";
+  }
+
+  socket.on("chat-message", (data) => {
+    const div = document.createElement("div");
+    div.className = "msg";
+    div.innerHTML = `<span class="name">${escapeHtml(data.name)}:</span> ${escapeHtml(data.text)} <span class="time">${data.time}</span>`;
+    const messages = document.getElementById("messages");
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  socket.on("system-message", (text) => {
+    const div = document.createElement("div");
+    div.className = "system";
+    div.textContent = text;
+    const messages = document.getElementById("messages");
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  });
+
+  function escapeHtml(str) {
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+</script>
+
+</body>
+</html>
