@@ -1,114 +1,278 @@
+cat > /home/claude/private-chat2/public/index.html << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>Private Chat</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Just Us — Private Chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --bg-deep: #0d1017;
+    --bg-glow: #1a1530;
+    --panel: #1b1f2a;
+    --panel-border: #2a2f3d;
+    --amber: #e8b14c;
+    --teal: #4fd1c5;
+    --teal-dim: #2c4a48;
+    --text: #f2efe9;
+    --text-muted: #8b93a7;
+    --danger: #e07a6c;
+  }
+
+  * { box-sizing: border-box; }
+
   body {
-    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
-    background: #f4f4f7;
+    font-family: 'Inter', -apple-system, sans-serif;
     margin: 0;
+    min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    padding: 20px;
+    background:
+      radial-gradient(ellipse at 30% 20%, var(--bg-glow) 0%, transparent 55%),
+      radial-gradient(ellipse at 80% 80%, #241a2e 0%, transparent 50%),
+      var(--bg-deep);
+    color: var(--text);
   }
-  #login-box, #chat-box {
-    background: white;
-    padding: 24px;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    width: 340px;
+
+  h1, h2 { font-family: 'Fraunces', serif; font-weight: 600; margin: 0; }
+
+  /* ---- Login ---- */
+  #login-box { width: 320px; text-align: center; }
+  .glow-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 12px 3px rgba(232,177,76,0.6);
+    margin: 0 auto 18px;
   }
-  #chat-box { display: none; width: 380px; }
+  #login-box h1 { font-size: 28px; margin-bottom: 6px; }
+  .tagline { color: var(--text-muted); font-size: 14px; margin-bottom: 28px; }
+
+  input, select {
+    width: 100%;
+    padding: 13px 14px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-border);
+    background: var(--panel);
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  select { appearance: none; cursor: pointer; }
+  input::placeholder { color: var(--text-muted); }
+  input:focus, select:focus { border-color: var(--amber); }
+
+  button {
+    width: 100%;
+    padding: 13px;
+    margin-top: 16px;
+    border-radius: 10px;
+    border: none;
+    background: var(--amber);
+    color: #1a1408;
+    font-weight: 600;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.15s ease;
+  }
+  button:hover { opacity: 0.92; }
+  button:active { transform: scale(0.98); }
+
+  #error { color: var(--danger); font-size: 13px; margin-top: 12px; min-height: 16px; }
+
+  /* ---- Chat ---- */
+  #chat-box {
+    display: none;
+    width: 420px;
+    max-width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
   .chat-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--panel-border);
   }
-  .chat-header h3 { margin: 0; font-size: 16px; }
+  .chat-header-title { display: flex; align-items: center; gap: 9px; }
+  .chat-header h2 { font-size: 17px; }
+
   #logout-btn {
     width: auto;
     margin-top: 0;
-    background: #eee;
-    color: #333;
-    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--panel-border);
+    padding: 7px 13px;
     font-size: 12px;
+    font-weight: 500;
   }
-  input, button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 8px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-    font-size: 14px;
-  }
-  button {
-    background: #4f46e5;
-    color: white;
-    border: none;
-    cursor: pointer;
-    margin-top: 12px;
-  }
+  #logout-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
   #messages {
-    height: 320px;
+    height: 380px;
     overflow-y: auto;
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 4px;
-    background: #fafafa;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
   }
-  .msg { margin-bottom: 10px; position: relative; }
-  .msg .name { font-weight: 600; color: #4f46e5; }
-  .msg .time { font-size: 11px; color: #999; margin-left: 6px; }
-  .msg .tick { font-size: 11px; margin-left: 4px; color: #999; }
-  .msg .tick.seen { color: #4f46e5; }
-  .msg .edited-tag { font-size: 10px; color: #999; font-style: italic; margin-left: 4px; }
-  .msg .deleted-text { font-style: italic; color: #999; }
+  #messages::-webkit-scrollbar { width: 6px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 3px; }
+
+  .msg-row { display: flex; margin-bottom: 9px; max-width: 100%; flex-direction: column; }
+  .msg-row.mine { align-items: flex-end; }
+  .msg-row.theirs { align-items: flex-start; }
+
+  .sender-label {
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    padding: 0 3px;
+  }
+
+  .bubble {
+    position: relative;
+    max-width: 78%;
+    padding: 10px 14px;
+    border-radius: 16px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    word-wrap: break-word;
+  }
+  .msg-row.mine .bubble {
+    background: var(--amber);
+    color: #1a1408;
+    border-bottom-right-radius: 4px;
+  }
+  .msg-row.theirs .bubble {
+    background: rgba(79,209,197,0.08);
+    border: 1px solid var(--teal-dim);
+    color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble .deleted-text { font-style: italic; opacity: 0.6; }
+  .bubble img { max-width: 100%; border-radius: 10px; display: block; margin-top: 2px; cursor: pointer; }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10.5px; margin-top: 3px; opacity: 0.7;
+  }
+  .msg-row.mine .meta-row { color: #7a5f2c; }
+  .msg-row.theirs .meta-row { color: var(--text-muted); }
+
+  .tick { font-size: 12px; }
+  .tick.seen { color: var(--teal); }
+
   .msg-actions {
-    display: none;
-    font-size: 11px;
-    margin-top: 2px;
+    display: none; gap: 10px; font-size: 11px; margin-top: 2px; cursor: pointer;
   }
-  .msg-actions span {
-    cursor: pointer;
-    color: #4f46e5;
-    margin-right: 10px;
+  .msg-row.mine:hover .msg-actions { display: flex; }
+  .msg-actions span { color: var(--text-muted); }
+  .msg-actions span:hover { color: var(--text); }
+
+  .system {
+    text-align: center; color: var(--text-muted);
+    font-size: 12px; font-style: italic; margin: 8px 0;
   }
-  .msg.own:hover .msg-actions { display: block; }
-  .system { color: #888; font-style: italic; font-size: 13px; text-align: center; margin: 6px 0; }
-  #error { color: #d33; font-size: 13px; margin-top: 8px; min-height: 16px; }
+
   #typing-indicator {
-    font-size: 12px;
-    color: #888;
-    font-style: italic;
-    min-height: 16px;
-    margin-bottom: 4px;
+    font-size: 12px; color: var(--teal); font-style: italic;
+    min-height: 18px; padding: 0 18px;
   }
+
+  .input-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 14px 16px 16px; border-top: 1px solid var(--panel-border);
+    position: relative;
+  }
+  .input-row input { margin-top: 0; flex: 1; }
+  .input-row button.send-btn { width: auto; margin-top: 0; padding: 0 18px; }
+
+  .icon-btn {
+    width: 38px; height: 38px; flex-shrink: 0;
+    border-radius: 10px; border: 1px solid var(--panel-border);
+    background: transparent; color: var(--text-muted);
+    font-size: 17px; margin-top: 0; padding: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+  #emoji-panel {
+    display: none;
+    position: absolute;
+    bottom: 60px;
+    left: 16px;
+    right: 16px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 10px;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  #emoji-panel span {
+    cursor: pointer;
+    text-align: center;
+    font-size: 20px;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  #emoji-panel span:hover { background: rgba(255,255,255,0.08); }
 </style>
 </head>
 <body>
 
 <div id="login-box">
-  <h2>Join Private Chat</h2>
-  <input id="name" placeholder="Your name" />
-  <input id="passcode" placeholder="Passcode" type="password" />
-  <button onclick="join()">Join</button>
+  <div class="glow-dot"></div>
+  <h1>Just Us</h1>
+  <div class="tagline">A private space, just the four of you.</div>
+  <select id="name">
+    <option value="" disabled selected>Choose your name</option>
+    <option>Niku Patle</option>
+    <option>Himanshu Pardhi</option>
+    <option>Arju Bisen</option>
+    <option>Kinjal</option>
+  </select>
+  <input id="password" placeholder="Password" type="password" />
+  <button onclick="join()">Enter</button>
   <div id="error"></div>
 </div>
 
 <div id="chat-box">
   <div class="chat-header">
-    <h3>Private Chat</h3>
+    <div class="chat-header-title">
+      <div class="glow-dot" style="margin:0;"></div>
+      <h2>Just Us</h2>
+    </div>
     <button id="logout-btn" onclick="logout()">Logout</button>
   </div>
   <div id="messages"></div>
   <div id="typing-indicator"></div>
-  <input id="msg-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()" />
-  <button onclick="sendMsg()">Send</button>
+  <div class="input-row">
+    <button class="icon-btn" onclick="toggleEmoji()" title="Emoji">😊</button>
+    <button class="icon-btn" onclick="document.getElementById('image-input').click()" title="Send a photo">📷</button>
+    <input type="file" id="image-input" accept="image/*" style="display:none" onchange="handleImageSelect(event)" />
+    <input id="msg-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()" />
+    <button class="send-btn" onclick="sendMsg()">Send</button>
+    <div id="emoji-panel"></div>
+  </div>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -117,14 +281,32 @@
   let myName = "";
   let typingTimeout = null;
 
-  function join() {
-    const name = document.getElementById("name").value.trim();
-    const passcode = document.getElementById("passcode").value;
-    if (!name || !passcode) {
-      document.getElementById("error").textContent = "Please enter both fields.";
+  const EMOJIS = ["😀","😂","😍","😊","😉","😘","😢","😭","😡","👍","👎","🙏","🎉","❤","🔥","💯","😴","🤔","😎","🥳","👋","🙌","😅","🤗"];
+
+  function toggleEmoji() {
+    const panel = document.getElementById("emoji-panel");
+    if (panel.style.display === "grid") {
+      panel.style.display = "none";
       return;
     }
-    socket.emit("join", { name, passcode });
+    panel.innerHTML = EMOJIS.map(e => `<span onclick="insertEmoji('${e}')">${e}</span>`).join("");
+    panel.style.display = "grid";
+  }
+
+  function insertEmoji(e) {
+    const input = document.getElementById("msg-input");
+    input.value += e;
+    input.focus();
+  }
+
+  function join() {
+    const name = document.getElementById("name").value;
+    const password = document.getElementById("password").value;
+    if (!name || !password) {
+      document.getElementById("error").textContent = "Please choose your name and enter your password.";
+      return;
+    }
+    socket.emit("join", { name, password });
   }
 
   socket.on("join-error", (msg) => {
@@ -141,7 +323,7 @@
     socket.emit("logout");
     socket.disconnect();
     document.getElementById("chat-box").innerHTML =
-      '<p style="text-align:center;color:#555;">You have logged out. Refresh the page to join again.</p>';
+      '<p style="text-align:center;color:var(--text-muted);padding:40px 20px;">You have logged out.<br>Refresh the page to join again.</p>';
   }
 
   function sendMsg() {
@@ -151,14 +333,29 @@
     socket.emit("chat-message", text);
     socket.emit("stop-typing");
     input.value = "";
+    document.getElementById("emoji-panel").style.display = "none";
+  }
+
+  function handleImageSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      alert("Please choose an image smaller than 4 MB.");
+      event.target.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      socket.emit("chat-image", reader.result);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
   }
 
   function handleTyping() {
     socket.emit("typing");
     clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      socket.emit("stop-typing");
-    }, 1200);
+    typingTimeout = setTimeout(() => socket.emit("stop-typing"), 1200);
   }
 
   socket.on("typing", (data) => {
@@ -172,13 +369,14 @@
   function addMessageToScreen(data) {
     const isOwn = data.name === myName;
 
-    const div = document.createElement("div");
-    div.className = "msg" + (isOwn ? " own" : "");
-    div.dataset.id = data.id;
-    div.dataset.name = data.name;
-    renderMessageContent(div, data, isOwn);
+    const row = document.createElement("div");
+    row.className = "msg-row " + (isOwn ? "mine" : "theirs");
+    row.dataset.id = data.id;
+    row.dataset.name = data.name;
+    row.dataset.type = data.type || "text";
+    renderMessageContent(row, data, isOwn);
 
-    document.getElementById("messages").appendChild(div);
+    document.getElementById("messages").appendChild(row);
     document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
 
     if (!isOwn && !data.deleted) {
@@ -186,37 +384,55 @@
     }
   }
 
-  function renderMessageContent(div, data, isOwn) {
+  function renderMessageContent(row, data, isOwn) {
+    row.innerHTML = "";
+
+    if (!isOwn) {
+      const label = document.createElement("div");
+      label.className = "sender-label";
+      label.textContent = data.name;
+      row.appendChild(label);
+    }
+
+    const bubble = document.createElement("div");
+    bubble.className = "bubble";
+
     if (data.deleted) {
-      div.innerHTML = `<span class="name">${escapeHtml(data.name)}:</span> <span class="deleted-text">This message was deleted</span> <span class="time">${data.time}</span>`;
+      bubble.innerHTML = `<span class="deleted-text">This message was deleted</span>`;
+      row.appendChild(bubble);
       return;
     }
 
-    const editedTag = data.edited ? '<span class="edited-tag">(edited)</span>' : "";
-    let tickHtml = "";
-    if (isOwn) {
-      tickHtml = `<span class="tick${data.seen ? " seen" : ""}">${data.seen ? "&#10003;&#10003;" : "&#10003;"}</span>`;
+    if (data.type === "image") {
+      bubble.innerHTML = `<img src="${data.text}" alt="shared photo" onclick="window.open('${data.text}','_blank')" />`;
+    } else {
+      bubble.innerHTML = `<span class="msg-text">${escapeHtml(data.text)}</span>`;
     }
 
-    div.innerHTML = `
-      <span class="name">${escapeHtml(data.name)}:</span>
-      <span class="msg-text">${escapeHtml(data.text)}</span>
-      ${editedTag}
-      <span class="time">${data.time}</span>
-      ${tickHtml}
-    `;
+    const meta = document.createElement("div");
+    meta.className = "meta-row";
+    const editedTag = data.edited ? `<span class="edited-tag">edited</span> · ` : "";
+    let tickHtml = "";
+    if (isOwn) {
+      tickHtml = ` <span class="tick${data.seen ? " seen" : ""}">${data.seen ? "&#10003;&#10003;" : "&#10003;"}</span>`;
+    }
+    meta.innerHTML = `${editedTag}<span class="time">${data.time}</span>${tickHtml}`;
+
+    row.appendChild(bubble);
+    row.appendChild(meta);
 
     if (isOwn) {
       const actions = document.createElement("div");
       actions.className = "msg-actions";
-      actions.innerHTML = `<span onclick="editMsg('${data.id}')">Edit</span><span onclick="deleteMsg('${data.id}')">Delete</span>`;
-      div.appendChild(actions);
+      const editBtn = data.type === "text" ? `<span onclick="editMsg('${data.id}')">Edit</span>` : "";
+      actions.innerHTML = `${editBtn}<span onclick="deleteMsg('${data.id}')">Delete</span>`;
+      row.appendChild(actions);
     }
   }
 
   function editMsg(id) {
-    const div = document.querySelector(`.msg[data-id="${id}"]`);
-    const currentText = div.querySelector(".msg-text").textContent;
+    const row = document.querySelector(`.msg-row[data-id="${id}"]`);
+    const currentText = row.querySelector(".msg-text").textContent;
     const newText = prompt("Edit your message:", currentText);
     if (newText !== null && newText.trim() && newText.trim() !== currentText) {
       socket.emit("edit-message", { id, text: newText.trim() });
@@ -236,9 +452,9 @@
   });
 
   socket.on("message-seen", ({ id }) => {
-    const div = document.querySelector(`.msg[data-id="${id}"]`);
-    if (div) {
-      const tick = div.querySelector(".tick");
+    const row = document.querySelector(`.msg-row[data-id="${id}"]`);
+    if (row) {
+      const tick = row.querySelector(".tick");
       if (tick) {
         tick.classList.add("seen");
         tick.innerHTML = "&#10003;&#10003;";
@@ -247,25 +463,22 @@
   });
 
   socket.on("message-edited", ({ id, text }) => {
-    const div = document.querySelector(`.msg[data-id="${id}"]`);
-    if (div) {
-      const span = div.querySelector(".msg-text");
+    const row = document.querySelector(`.msg-row[data-id="${id}"]`);
+    if (row) {
+      const span = row.querySelector(".msg-text");
       if (span) span.textContent = text;
-      if (!div.querySelector(".edited-tag")) {
-        const tag = document.createElement("span");
-        tag.className = "edited-tag";
-        tag.textContent = "(edited)";
-        div.querySelector(".time").before(tag);
+      const meta = row.querySelector(".meta-row");
+      if (meta && !meta.querySelector(".edited-tag")) {
+        meta.insertAdjacentHTML("afterbegin", `<span class="edited-tag">edited</span> · `);
       }
     }
   });
 
   socket.on("message-deleted", ({ id }) => {
-    const div = document.querySelector(`.msg[data-id="${id}"]`);
-    if (div) {
-      const isOwn = div.classList.contains("own");
-      div.innerHTML = "";
-      renderMessageContent(div, { name: div.dataset.name || "", deleted: true, time: "" }, isOwn);
+    const row = document.querySelector(`.msg-row[data-id="${id}"]`);
+    if (row) {
+      const isOwn = row.classList.contains("mine");
+      renderMessageContent(row, { name: row.dataset.name || "", deleted: true }, isOwn);
     }
   });
 
@@ -287,3 +500,5 @@
 
 </body>
 </html>
+HTMLEOF
+echo "done"
