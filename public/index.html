@@ -21,6 +21,21 @@
     width: 340px;
   }
   #chat-box { display: none; width: 380px; }
+  .chat-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .chat-header h3 { margin: 0; font-size: 16px; }
+  #logout-btn {
+    width: auto;
+    margin-top: 0;
+    background: #eee;
+    color: #333;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
   input, button {
     width: 100%;
     padding: 10px;
@@ -43,14 +58,36 @@
     border: 1px solid #eee;
     border-radius: 8px;
     padding: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
     background: #fafafa;
   }
-  .msg { margin-bottom: 8px; }
+  .msg { margin-bottom: 10px; position: relative; }
   .msg .name { font-weight: 600; color: #4f46e5; }
   .msg .time { font-size: 11px; color: #999; margin-left: 6px; }
+  .msg .tick { font-size: 11px; margin-left: 4px; color: #999; }
+  .msg .tick.seen { color: #4f46e5; }
+  .msg .edited-tag { font-size: 10px; color: #999; font-style: italic; margin-left: 4px; }
+  .msg .deleted-text { font-style: italic; color: #999; }
+  .msg-actions {
+    display: none;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .msg-actions span {
+    cursor: pointer;
+    color: #4f46e5;
+    margin-right: 10px;
+  }
+  .msg.own:hover .msg-actions { display: block; }
   .system { color: #888; font-style: italic; font-size: 13px; text-align: center; margin: 6px 0; }
   #error { color: #d33; font-size: 13px; margin-top: 8px; min-height: 16px; }
+  #typing-indicator {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+    min-height: 16px;
+    margin-bottom: 4px;
+  }
 </style>
 </head>
 <body>
@@ -64,14 +101,21 @@
 </div>
 
 <div id="chat-box">
+  <div class="chat-header">
+    <h3>Private Chat</h3>
+    <button id="logout-btn" onclick="logout()">Logout</button>
+  </div>
   <div id="messages"></div>
-  <input id="msg-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" />
+  <div id="typing-indicator"></div>
+  <input id="msg-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendMsg()" oninput="handleTyping()" />
   <button onclick="sendMsg()">Send</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
   const socket = io();
+  let myName = "";
+  let typingTimeout = null;
 
   function join() {
     const name = document.getElementById("name").value.trim();
@@ -87,33 +131,142 @@
     document.getElementById("error").textContent = msg;
   });
 
-  socket.on("join-success", () => {
+  socket.on("join-success", (data) => {
+    myName = data.name;
     document.getElementById("login-box").style.display = "none";
     document.getElementById("chat-box").style.display = "block";
   });
+
+  function logout() {
+    socket.emit("logout");
+    socket.disconnect();
+    document.getElementById("chat-box").innerHTML =
+      '<p style="text-align:center;color:#555;">You have logged out. Refresh the page to join again.</p>';
+  }
 
   function sendMsg() {
     const input = document.getElementById("msg-input");
     const text = input.value.trim();
     if (!text) return;
     socket.emit("chat-message", text);
+    socket.emit("stop-typing");
     input.value = "";
   }
 
+  function handleTyping() {
+    socket.emit("typing");
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      socket.emit("stop-typing");
+    }, 1200);
+  }
+
+  socket.on("typing", (data) => {
+    document.getElementById("typing-indicator").textContent = `${data.name} is typing...`;
+  });
+
+  socket.on("stop-typing", () => {
+    document.getElementById("typing-indicator").textContent = "";
+  });
+
   function addMessageToScreen(data) {
+    const isOwn = data.name === myName;
+
     const div = document.createElement("div");
-    div.className = "msg";
-    div.innerHTML = `<span class="name">${escapeHtml(data.name)}:</span> ${escapeHtml(data.text)} <span class="time">${data.time}</span>`;
-    const messages = document.getElementById("messages");
-    messages.appendChild(div);
-    messages.scrollTop = messages.scrollHeight;
+    div.className = "msg" + (isOwn ? " own" : "");
+    div.dataset.id = data.id;
+    div.dataset.name = data.name;
+    renderMessageContent(div, data, isOwn);
+
+    document.getElementById("messages").appendChild(div);
+    document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
+
+    if (!isOwn && !data.deleted) {
+      socket.emit("message-seen", { id: data.id });
+    }
+  }
+
+  function renderMessageContent(div, data, isOwn) {
+    if (data.deleted) {
+      div.innerHTML = `<span class="name">${escapeHtml(data.name)}:</span> <span class="deleted-text">This message was deleted</span> <span class="time">${data.time}</span>`;
+      return;
+    }
+
+    const editedTag = data.edited ? '<span class="edited-tag">(edited)</span>' : "";
+    let tickHtml = "";
+    if (isOwn) {
+      tickHtml = `<span class="tick${data.seen ? " seen" : ""}">${data.seen ? "&#10003;&#10003;" : "&#10003;"}</span>`;
+    }
+
+    div.innerHTML = `
+      <span class="name">${escapeHtml(data.name)}:</span>
+      <span class="msg-text">${escapeHtml(data.text)}</span>
+      ${editedTag}
+      <span class="time">${data.time}</span>
+      ${tickHtml}
+    `;
+
+    if (isOwn) {
+      const actions = document.createElement("div");
+      actions.className = "msg-actions";
+      actions.innerHTML = `<span onclick="editMsg('${data.id}')">Edit</span><span onclick="deleteMsg('${data.id}')">Delete</span>`;
+      div.appendChild(actions);
+    }
+  }
+
+  function editMsg(id) {
+    const div = document.querySelector(`.msg[data-id="${id}"]`);
+    const currentText = div.querySelector(".msg-text").textContent;
+    const newText = prompt("Edit your message:", currentText);
+    if (newText !== null && newText.trim() && newText.trim() !== currentText) {
+      socket.emit("edit-message", { id, text: newText.trim() });
+    }
+  }
+
+  function deleteMsg(id) {
+    if (confirm("Delete this message?")) {
+      socket.emit("delete-message", { id });
+    }
   }
 
   socket.on("chat-message", addMessageToScreen);
 
-  // When we join, the server sends all past saved messages at once
   socket.on("chat-history", (history) => {
     history.forEach(addMessageToScreen);
+  });
+
+  socket.on("message-seen", ({ id }) => {
+    const div = document.querySelector(`.msg[data-id="${id}"]`);
+    if (div) {
+      const tick = div.querySelector(".tick");
+      if (tick) {
+        tick.classList.add("seen");
+        tick.innerHTML = "&#10003;&#10003;";
+      }
+    }
+  });
+
+  socket.on("message-edited", ({ id, text }) => {
+    const div = document.querySelector(`.msg[data-id="${id}"]`);
+    if (div) {
+      const span = div.querySelector(".msg-text");
+      if (span) span.textContent = text;
+      if (!div.querySelector(".edited-tag")) {
+        const tag = document.createElement("span");
+        tag.className = "edited-tag";
+        tag.textContent = "(edited)";
+        div.querySelector(".time").before(tag);
+      }
+    }
+  });
+
+  socket.on("message-deleted", ({ id }) => {
+    const div = document.querySelector(`.msg[data-id="${id}"]`);
+    if (div) {
+      const isOwn = div.classList.contains("own");
+      div.innerHTML = "";
+      renderMessageContent(div, { name: div.dataset.name || "", deleted: true, time: "" }, isOwn);
+    }
   });
 
   socket.on("system-message", (text) => {
