@@ -4,26 +4,40 @@
 
 const express = require("express");
 const http = require("http");
+const path = require("path");
+const fs = require("fs");
 const { Server } = require("socket.io");
+
+// ---- DEBUG: show exactly what files exist where Render runs the app ----
+console.log("Current folder (__dirname):", __dirname);
+console.log("Files in root:", fs.readdirSync(__dirname));
+try {
+  console.log("Files in public folder:", fs.readdirSync(path.join(__dirname, "public")));
+} catch (e) {
+  console.log("PROBLEM: no 'public' folder found here:", e.message);
+}
+// --------------------------------------------------------------------
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// ---- SETTINGS YOU CAN CHANGE ----
-const PASSCODE = "nikupatle24";      // <-- set your own secret passcode here
+// ---- SETTINGS ----
+const PASSCODE = "nikupatle24";      // your secret passcode
 const MAX_PEOPLE = 2;                // only 2 people allowed in the room
-// ----------------------------------
+// -------------------
 
-let connectedUsers = {}; // keeps track of who is currently in the chat
+let connectedUsers = {};
 
-// Serve the webpage (the HTML/CSS/JS in the "public" folder)
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 io.on("connection", (socket) => {
   let joined = false;
 
-  // When someone tries to join with a name + passcode
   socket.on("join", ({ name, passcode }) => {
     if (passcode !== PASSCODE) {
       socket.emit("join-error", "Wrong passcode.");
@@ -40,9 +54,8 @@ io.on("connection", (socket) => {
     io.emit("system-message", `${connectedUsers[socket.id]} joined the chat.`);
   });
 
-  // When a message is sent
   socket.on("chat-message", (msg) => {
-    if (!joined) return; // ignore messages from people who haven't joined properly
+    if (!joined) return;
     io.emit("chat-message", {
       name: connectedUsers[socket.id],
       text: msg,
@@ -50,7 +63,6 @@ io.on("connection", (socket) => {
     });
   });
 
-  // When someone closes the tab / disconnects
   socket.on("disconnect", () => {
     if (joined) {
       io.emit("system-message", `${connectedUsers[socket.id]} left the chat.`);
