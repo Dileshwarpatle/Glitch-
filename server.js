@@ -18,15 +18,13 @@ const io = new Server(server, {
 });
 
 // ---- ACCOUNTS ----
-// Only these 4 exact name + password pairs can log in.
+// Only these 2 exact name + password pairs can log in.
 // To change a password later, just edit the value here and redeploy.
 const USERS = {
   "Niku Patle": "niku24patle",
-  "Himanshu Pardhi": "himanshu123",
-  "Arju Bisen": "arju123",
   "Kinjal": "Kittu22",
 };
-const MAX_PEOPLE = 4; // all 4 accounts can be online together
+const MAX_PEOPLE = 2; // both accounts can be online together
 // -------------------
 
 let connectedUsers = {}; // socket.id -> name, for people currently connected
@@ -183,4 +181,3 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
-        
