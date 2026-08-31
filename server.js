@@ -1,6 +1,6 @@
 // server.js — the "brain" of the chat app.
-// It runs the website, checks the passcode, and passes messages
-// between the two people in real time.
+// It runs the website, checks each person's name+password, and passes
+// messages (including images) between everyone in real time.
 
 const express = require("express");
 const http = require("http");
@@ -11,11 +11,22 @@ const { Server } = require("socket.io");
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
 
-// ---- SETTINGS ----
-const PASSCODE = "nikupatle24";      // your secret passcode
-const MAX_PEOPLE = 2;                // only 2 people allowed in the room
+// Allow slightly bigger messages so small images can be sent as base64 text
+const io = new Server(server, {
+  maxHttpBufferSize: 5 * 1024 * 1024, // 5 MB per message
+});
+
+// ---- ACCOUNTS ----
+// Only these 4 exact name + password pairs can log in.
+// To change a password later, just edit the value here and redeploy.
+const USERS = {
+  "Niku Patle": "niku24patle",
+  "Himanshu Pardhi": "himanshu123",
+  "Arju Bisen": "arju123",
+  "Kinjal": "Kittu22",
+};
+const MAX_PEOPLE = 4; // all 4 accounts can be online together
 // -------------------
 
 let connectedUsers = {}; // socket.id -> name, for people currently connected
@@ -52,28 +63,30 @@ io.on("connection", (socket) => {
   let joined = false;
   let loggedOut = false;
 
-  socket.on("join", ({ name, passcode }) => {
-    if (passcode !== PASSCODE) {
-      socket.emit("join-error", "Wrong passcode.");
+  socket.on("join", ({ name, password }) => {
+    const correctPassword = USERS[name];
+    if (!correctPassword || password !== correctPassword) {
+      socket.emit("join-error", "Wrong name or password.");
       return;
     }
     if (Object.keys(connectedUsers).length >= MAX_PEOPLE) {
-      socket.emit("join-error", "Chat room is full (max 2 people).");
+      socket.emit("join-error", "Chat room is full.");
       return;
     }
 
     joined = true;
-    connectedUsers[socket.id] = name || "Anonymous";
-    socket.emit("join-success", { name: connectedUsers[socket.id] });
+    connectedUsers[socket.id] = name;
+    socket.emit("join-success", { name });
     socket.emit("chat-history", chatHistory);
-    io.emit("system-message", `${connectedUsers[socket.id]} joined the chat.`);
+    io.emit("system-message", `${name} joined the chat.`);
   });
 
-  // A new chat message
+  // A new text message
   socket.on("chat-message", (msg) => {
     if (!joined || !msg || !msg.trim()) return;
     const messageData = {
       id: crypto.randomUUID(),
+      type: "text",
       name: connectedUsers[socket.id],
       text: msg.trim(),
       time: new Date().toLocaleTimeString(),
@@ -86,7 +99,25 @@ io.on("connection", (socket) => {
     io.emit("chat-message", messageData);
   });
 
-  // The other person confirms they've seen a message
+  // A new image message (sent as a base64 data URL from the browser)
+  socket.on("chat-image", (imageData) => {
+    if (!joined || !imageData) return;
+    const messageData = {
+      id: crypto.randomUUID(),
+      type: "image",
+      name: connectedUsers[socket.id],
+      text: imageData, // holds the image data URL
+      time: new Date().toLocaleTimeString(),
+      seen: false,
+      edited: false,
+      deleted: false,
+    };
+    chatHistory.push(messageData);
+    saveMessages(chatHistory);
+    io.emit("chat-message", messageData);
+  });
+
+  // Anyone else seeing a message marks it as seen (blue tick)
   socket.on("message-seen", ({ id }) => {
     const m = chatHistory.find((m) => m.id === id);
     if (m && !m.seen) {
@@ -96,11 +127,11 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Editing your own message
+  // Editing your own text message
   socket.on("edit-message", ({ id, text }) => {
     if (!joined || !text || !text.trim()) return;
     const m = chatHistory.find((m) => m.id === id);
-    if (m && m.name === connectedUsers[socket.id] && !m.deleted) {
+    if (m && m.type === "text" && m.name === connectedUsers[socket.id] && !m.deleted) {
       m.text = text.trim();
       m.edited = true;
       saveMessages(chatHistory);
@@ -108,7 +139,7 @@ io.on("connection", (socket) => {
     }
   });
 
-  // Deleting your own message
+  // Deleting your own message (text or image)
   socket.on("delete-message", ({ id }) => {
     if (!joined) return;
     const m = chatHistory.find((m) => m.id === id);
@@ -152,3 +183,4 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
+        
