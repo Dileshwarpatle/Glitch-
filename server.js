@@ -1,4 +1,5 @@
 // server.js — the "brain" of the chat app.
+
 const express = require("express");
 const http = require("http");
 const path = require("path");
@@ -185,12 +186,10 @@ io.on("connection", (socket) => {
     const m = chatHistory.find((m) => m.id === id);
     if (!m || m.deleted) return;
     if (!m.reactions) m.reactions = {};
-    // remove this person's existing reaction on this message first
     for (const key of Object.keys(m.reactions)) {
       m.reactions[key] = m.reactions[key].filter((n) => n !== myName);
       if (m.reactions[key].length === 0) delete m.reactions[key];
     }
-    // toggle: if they clicked the same emoji they already had, leave it removed
     const alreadyHadThis = m.reactions[emoji] && m.reactions[emoji].includes(myName);
     if (!alreadyHadThis) {
       if (!m.reactions[emoji]) m.reactions[emoji] = [];
@@ -255,4 +254,4 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Chat server running on port ${PORT}JSEOF
+server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
