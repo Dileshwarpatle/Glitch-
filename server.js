@@ -3,7 +3,6 @@
 const express = require("express");
 const http = require("http");
 const path = require("path");
-const fs = require("fs");
 const crypto = require("crypto");
 const { Server } = require("socket.io");
 
@@ -27,32 +26,52 @@ const MAX_MESSAGE_AGE_DAYS = 30;
 
 let connectedUsers = {}; // socket.id -> name
 
-// ---- MESSAGE STORAGE ----
-const MESSAGES_FILE = path.join(__dirname, "messages.json");
-const STATE_FILE = path.join(__dirname, "state.json");
+// ---- Upstash Redis (persistent storage that survives Render restarts) ----
+const UPSTASH_REDIS_REST_URL = "https://good-mole-175438.upstash.io";
+const UPSTASH_REDIS_REST_TOKEN = "gQAAAAAAAq1OAAIgcDJlYTAyOGE4YjM4NTA0MWJmYWE0NWEwNjQ1NjBiYTcyYg";
+const MESSAGES_KEY = "nikukinjal_messages";
+const STATE_KEY = "nikukinjal_state";
 const MAX_STORED_MESSAGES = 1000;
 
-function loadJSON(file, fallback) {
+async function redisGet(key) {
+  const res = await fetch(`${UPSTASH_REDIS_REST_URL}/get/${key}`, {
+    headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
+  });
+  const data = await res.json();
+  return data.result; // string or null
+}
+async function redisSet(key, value) {
   try {
-    return JSON.parse(fs.readFileSync(file, "utf8"));
+    await fetch(`${UPSTASH_REDIS_REST_URL}/set/${key}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${UPSTASH_REDIS_REST_TOKEN}` },
+      body: value,
+    });
+  } catch (err) {
+    console.log(`Could not save ${key} to Upstash:`, err.message);
+  }
+}
+async function loadJSON(key, fallback) {
+  try {
+    const raw = await redisGet(key);
+    return raw ? JSON.parse(raw) : fallback;
   } catch (e) {
+    console.log(`Could not load ${key} from Upstash:`, e.message);
     return fallback;
   }
 }
-function saveJSON(file, data) {
-  fs.writeFile(file, JSON.stringify(data), (err) => {
-    if (err) console.log(`Could not save ${file}:`, err.message);
-  });
+function saveJSON(key, data) {
+  redisSet(key, JSON.stringify(data)); // fire-and-forget
 }
 
-let chatHistory = loadJSON(MESSAGES_FILE, []);
-let state = loadJSON(STATE_FILE, {
+let chatHistory = []; // loaded from Upstash at startup, before the server starts listening
+let state = {
   pinnedMessageId: null,
   presence: Object.fromEntries(Object.keys(USERS).map((n) => [n, { online: false, lastSeen: null }])),
-});
+};
 
-function saveMessages() { saveJSON(MESSAGES_FILE, chatHistory.slice(-MAX_STORED_MESSAGES)); }
-function saveState() { saveJSON(STATE_FILE, state); }
+function saveMessages() { saveJSON(MESSAGES_KEY, chatHistory.slice(-MAX_STORED_MESSAGES)); }
+function saveState() { saveJSON(STATE_KEY, state); }
 
 function removeOldMessages() {
   const cutoff = Date.now() - MAX_MESSAGE_AGE_DAYS * 24 * 60 * 60 * 1000;
@@ -60,7 +79,6 @@ function removeOldMessages() {
   chatHistory = chatHistory.filter((m) => m.createdAt >= cutoff);
   if (chatHistory.length !== before) saveMessages();
 }
-removeOldMessages();
 setInterval(removeOldMessages, 60 * 60 * 1000); // check every hour
 
 // --------------------------
@@ -186,10 +204,12 @@ io.on("connection", (socket) => {
     const m = chatHistory.find((m) => m.id === id);
     if (!m || m.deleted) return;
     if (!m.reactions) m.reactions = {};
+    // remove this person's existing reaction on this message first
     for (const key of Object.keys(m.reactions)) {
       m.reactions[key] = m.reactions[key].filter((n) => n !== myName);
       if (m.reactions[key].length === 0) delete m.reactions[key];
     }
+    // toggle: if they clicked the same emoji they already had, leave it removed
     const alreadyHadThis = m.reactions[emoji] && m.reactions[emoji].includes(myName);
     if (!alreadyHadThis) {
       if (!m.reactions[emoji]) m.reactions[emoji] = [];
@@ -254,4 +274,15 @@ io.on("connection", (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
+Promise.all([
+  loadJSON(MESSAGES_KEY, []),
+  loadJSON(STATE_KEY, {
+    pinnedMessageId: null,
+    presence: Object.fromEntries(Object.keys(USERS).map((n) => [n, { online: false, lastSeen: null }])),
+  }),
+]).then(([loadedMessages, loadedState]) => {
+  chatHistory = loadedMessages;
+  state = loadedState;
+  removeOldMessages();
+  server.listen(PORT, () => console.log(`Chat server running on port ${PORT}`));
+});
